@@ -12,7 +12,6 @@ import (
 type poll struct {
 	fd      int
 	changes []syscall.Kevent_t
-	readBuf []byte
 }
 
 func newPoll() *poll {
@@ -30,19 +29,18 @@ func newPoll() *poll {
 	}
 
 	return &poll{
-		fd:      fd,
-		readBuf: make([]byte, 65535),
+		fd: fd,
 	}
-}
-
-func (p *poll) close() {
-	syscall.Close(p.fd)
 }
 
 func (p *poll) addRead(fd int) {
 	p.changes = append(p.changes,
 		syscall.Kevent_t{Ident: uint64(fd), Flags: syscall.EV_ADD, Filter: syscall.EVFILT_READ},
 	)
+}
+
+func (p *poll) close() {
+	syscall.Close(p.fd)
 }
 
 func (p *poll) run(ctx context.Context) {
@@ -70,7 +68,7 @@ func (p *poll) run(ctx context.Context) {
 						return
 					}
 				default:
-					if err := readConn(c, p); err != nil {
+					if err := readConn(c); err != nil {
 						log.Println("readConn Conn:", c, "error:", err.Error())
 						return
 					}

@@ -13,16 +13,14 @@ const maxConnNum = 10000
 
 var s *server
 
-func init() {
-	s = &server{fdconns: make(map[int]*Conn)}
-}
-
 type server struct {
 	ln        *listener
-	ctx       context.Context
-	cancel    context.CancelFunc
 	fdconns   map[int]*Conn
 	connCount int32
+	readBuf   []byte
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 type listener struct {
@@ -53,7 +51,11 @@ func Serve(addr string) error {
 	}
 
 	pollObj.addRead(ln.fd)
-	s.ln = &ln
+	s = &server{
+		ln:      &ln,
+		fdconns: make(map[int]*Conn),
+		readBuf: make([]byte, 65535),
+	}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	go pollObj.run(s.ctx)
 
@@ -108,8 +110,8 @@ func closeConn(c *Conn) error {
 	return nil
 }
 
-func readConn(c *Conn, p *poll) error {
-	n, err := syscall.Read(c.fd, p.readBuf)
+func readConn(c *Conn) error {
+	n, err := syscall.Read(c.fd, s.readBuf)
 	if n == 0 || err != nil {
 		if err == syscall.EAGAIN {
 			return nil
@@ -118,7 +120,7 @@ func readConn(c *Conn, p *poll) error {
 		return nil
 	}
 
-	in := append([]byte{}, p.readBuf[:n]...)
+	in := append([]byte{}, s.readBuf[:n]...)
 	log.Println(c.remoteAddr.String(), " receive:", string(in))
 	c.receive(in)
 	return nil
