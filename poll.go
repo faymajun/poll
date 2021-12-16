@@ -71,7 +71,7 @@ func (s *server) Stop() {
 	pollObj.close()
 }
 
-func accept(fd int, p *Poll) error {
+func accept(fd int, p *poll) error {
 	nfd, sa, err := syscall.Accept(fd)
 	if err != nil {
 		if err == syscall.EAGAIN {
@@ -108,7 +108,7 @@ func closeConn(c *Conn) error {
 	return nil
 }
 
-func readConn(c *Conn, p *Poll) error {
+func readConn(c *Conn, p *poll) error {
 	n, err := syscall.Read(c.fd, p.readBuf)
 	if n == 0 || err != nil {
 		if err == syscall.EAGAIN {

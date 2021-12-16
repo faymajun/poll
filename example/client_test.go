@@ -8,7 +8,6 @@ import (
 )
 
 func TestClient(t *testing.T) {
-
 	client, err := net.Dial("tcp", ":2200")
 	if err != nil {
 		log.Println("err:", err.Error())

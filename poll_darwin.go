@@ -9,13 +9,13 @@ import (
 	"syscall"
 )
 
-type Poll struct {
+type poll struct {
 	fd      int
 	changes []syscall.Kevent_t
 	readBuf []byte
 }
 
-func newPoll() *Poll {
+func newPoll() *poll {
 	fd, err := syscall.Kqueue()
 	if err != nil {
 		panic(err)
@@ -29,23 +29,23 @@ func newPoll() *Poll {
 		panic(err)
 	}
 
-	return &Poll{
+	return &poll{
 		fd:      fd,
 		readBuf: make([]byte, 65535),
 	}
 }
 
-func (p *Poll) close() {
+func (p *poll) close() {
 	syscall.Close(p.fd)
 }
 
-func (p *Poll) addRead(fd int) {
+func (p *poll) addRead(fd int) {
 	p.changes = append(p.changes,
 		syscall.Kevent_t{Ident: uint64(fd), Flags: syscall.EV_ADD, Filter: syscall.EVFILT_READ},
 	)
 }
 
-func (p *Poll) run(ctx context.Context) {
+func (p *poll) run(ctx context.Context) {
 	events := make([]syscall.Kevent_t, 128)
 	for {
 		select {
