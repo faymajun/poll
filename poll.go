@@ -23,13 +23,6 @@ type server struct {
 	cancel context.CancelFunc
 }
 
-type listener struct {
-	ln       net.Listener
-	f        *os.File
-	fd       int
-	writeBuf []byte
-}
-
 var pollObj = newPoll()
 
 func Serve(addr string) error {
@@ -41,7 +34,7 @@ func Serve(addr string) error {
 	}
 
 	if ln.f, err = ln.ln.(*net.TCPListener).File(); err != nil {
-		ln.ln.Close()
+		ln.close()
 		return err
 	}
 
@@ -62,15 +55,42 @@ func Serve(addr string) error {
 	return nil
 }
 
-func Stop() {
-	s.Stop()
-}
-
-func (s *server) Stop() {
+func (s *server) Close() {
 	// close listener
+	if s.ln != nil {
+		s.ln.close()
+	}
+
 	// close loop and all connects
 	s.cancel()
+
+	for _, c := range s.fdconns {
+		c.Close()
+	}
 	pollObj.close()
+}
+
+type listener struct {
+	ln       net.Listener
+	f        *os.File
+	fd       int
+	writeBuf []byte
+}
+
+func (ln *listener) close() {
+	if ln.fd != 0 {
+		syscall.Close(ln.fd)
+	}
+	if ln.f != nil {
+		ln.f.Close()
+	}
+	if ln.ln != nil {
+		ln.ln.Close()
+	}
+}
+
+func Close() {
+	s.Close()
 }
 
 func accept(fd int, p *poll) error {
