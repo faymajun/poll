@@ -55,4 +55,5 @@ func (c *Conn) Close() {
 	}
 
 	closeConn(c)
+	close(c.ReadChan)
 }

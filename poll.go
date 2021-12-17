@@ -117,7 +117,9 @@ func accept(fd int, p *poll) error {
 	s.fdconns[c.fd] = c
 	p.addRead(c.fd)
 
-	ConnOpened(c)
+	if ConnOpened != nil {
+		ConnOpened(c)
+	}
 	return nil
 }
 
@@ -126,7 +128,9 @@ func closeConn(c *Conn) error {
 	atomic.AddInt32(&s.connCount, -1)
 	syscall.Close(c.fd)
 
-	ConnClosed(c)
+	if ConnClosed != nil {
+		ConnClosed(c)
+	}
 	return nil
 }
 
