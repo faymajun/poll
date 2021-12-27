@@ -3,8 +3,9 @@ package poll
 import (
 	"net"
 	"sync"
-	"sync/atomic"
 	"syscall"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -16,9 +17,9 @@ type Conn struct {
 	fd         int
 	sa         syscall.Sockaddr
 	remoteAddr net.Addr
-	closed     int32
-	sendLock   sync.Mutex
-	ReadChan   chan []byte
+	sync.RWMutex
+	isClosed bool
+	ReadChan chan []byte
 }
 
 func newConn(fd int, sa syscall.Sockaddr, remoteAddr net.Addr) *Conn {
@@ -32,6 +33,12 @@ func newConn(fd int, sa syscall.Sockaddr, remoteAddr net.Addr) *Conn {
 }
 
 func (c *Conn) receive(data []byte) {
+	c.RLock()
+	defer c.RUnlock()
+	if c.isClosed {
+		return
+	}
+
 	c.ReadChan <- data
 }
 
@@ -40,8 +47,12 @@ func (c *Conn) Write(data []byte) error {
 		return nil
 	}
 
-	c.sendLock.Lock()
-	defer c.sendLock.Unlock()
+	c.RLock()
+	defer c.RUnlock()
+	if c.isClosed {
+		return errors.New("conn is closed")
+	}
+
 	return SendConn(c, data)
 }
 
@@ -50,9 +61,12 @@ func (c *Conn) RemoteAddr() net.Addr {
 }
 
 func (c *Conn) Close() {
-	if !atomic.CompareAndSwapInt32(&c.closed, 0, 1) {
+	c.Lock()
+	defer c.Unlock()
+	if c.isClosed {
 		return
 	}
+	c.isClosed = true
 
 	closeConn(c)
 	close(c.ReadChan)

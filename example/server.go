@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"github.com/faymajun/poll"
 	"io"
 	"log"
+
+	"github.com/faymajun/poll"
 
 	"github.com/pkg/errors"
 )
@@ -24,14 +25,17 @@ func init() {
 }
 
 func main() {
-	poll.Serve(":2200")
+	poll.Serve(":2202")
+
 	select {}
 }
+
+var reader io.Reader
 
 func Process(c *poll.Conn) {
 	ctx, _ := context.WithCancel(context.Background())
 	readBuf := bytes.NewBuffer(make([]byte, 0, 4096))
-	reader := bufio.NewReader(readBuf)
+	reader = bufio.NewReader(readBuf)
 	for {
 		select {
 		case <-ctx.Done():

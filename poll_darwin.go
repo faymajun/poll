@@ -5,7 +5,6 @@ package poll
 
 import (
 	"context"
-	"log"
 	"syscall"
 )
 
@@ -52,7 +51,7 @@ func (p *poll) run(ctx context.Context) {
 		default:
 			n, err := syscall.Kevent(p.fd, p.changes, events, nil)
 			if err != nil && err != syscall.EINTR {
-				log.Println(err)
+				// log.Println(err)
 				return
 			}
 
@@ -63,13 +62,13 @@ func (p *poll) run(ctx context.Context) {
 				c := s.fdconns[fd]
 				switch {
 				case c == nil:
-					if err := accept(fd, p); err != nil {
-						log.Println("accept fd:", fd, " error:", err.Error())
+					if err := accept(fd); err != nil {
+						// log.Println("accept fd:", fd, " error:", err.Error())
 						return
 					}
 				default:
 					if err := readConn(c); err != nil {
-						log.Println("readConn Conn:", c, "error:", err.Error())
+						// log.Println("readConn Conn:", c, "error:", err.Error())
 						return
 					}
 				}

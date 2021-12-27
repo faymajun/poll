@@ -2,11 +2,12 @@ package poll
 
 import (
 	"context"
-	"log"
 	"net"
 	"os"
 	"sync/atomic"
 	"syscall"
+
+	reuseport "github.com/kavu/go_reuseport"
 )
 
 const maxConnNum = 10000
@@ -29,7 +30,7 @@ func Serve(addr string) error {
 	var ln listener
 	var err error
 
-	if ln.ln, err = net.Listen("tcp", addr); err != nil {
+	if ln.ln, err = reuseportListen("tcp", addr); err != nil {
 		return err
 	}
 
@@ -55,7 +56,15 @@ func Serve(addr string) error {
 	return nil
 }
 
-func (s *server) Close() {
+func Close() {
+	s.close()
+}
+
+func StopListen() {
+	s.stopListen()
+}
+
+func (s *server) close() {
 	// close listener
 	if s.ln != nil {
 		s.ln.close()
@@ -68,6 +77,13 @@ func (s *server) Close() {
 		c.Close()
 	}
 	pollObj.close()
+}
+
+func (s *server) stopListen() {
+	// close listener
+	if s.ln != nil {
+		s.ln.close()
+	}
 }
 
 type listener struct {
@@ -89,11 +105,7 @@ func (ln *listener) close() {
 	}
 }
 
-func Close() {
-	s.Close()
-}
-
-func accept(fd int, p *poll) error {
+func accept(fd int) error {
 	nfd, sa, err := syscall.Accept(fd)
 	if err != nil {
 		if err == syscall.EAGAIN {
@@ -103,7 +115,7 @@ func accept(fd int, p *poll) error {
 	}
 
 	if atomic.LoadInt32(&s.connCount) > maxConnNum {
-		log.Println("Conn accept max")
+		// log.Println("Conn accept max")
 		syscall.Close(nfd)
 		return nil
 	}
@@ -115,11 +127,12 @@ func accept(fd int, p *poll) error {
 	atomic.AddInt32(&s.connCount, 1)
 
 	s.fdconns[c.fd] = c
-	p.addRead(c.fd)
+	pollObj.addRead(c.fd)
 
 	if ConnOpened != nil {
 		ConnOpened(c)
 	}
+
 	return nil
 }
 
@@ -145,13 +158,13 @@ func readConn(c *Conn) error {
 	}
 
 	in := append([]byte{}, s.readBuf[:n]...)
-	log.Println(c.remoteAddr.String(), " receive:", string(in))
+	// log.Println(c.remoteAddr.String(), " receive:", string(in))
 	c.receive(in)
 	return nil
 }
 
 func SendConn(c *Conn, data []byte) error {
-	log.Println(c.remoteAddr.String(), " Send:", string(data))
+	// log.Println(c.remoteAddr.String(), " Send:", string(data))
 	for len(data) > 0 {
 		nn, err := syscall.Write(c.fd, data)
 		if err != nil {
@@ -185,4 +198,8 @@ func sockAddrToAddr(sa syscall.Sockaddr) net.Addr {
 		}
 	}
 	return a
+}
+
+func reuseportListen(proto, addr string) (l net.Listener, err error) {
+	return reuseport.Listen(proto, addr)
 }

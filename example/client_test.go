@@ -8,19 +8,19 @@ import (
 )
 
 func TestClient(t *testing.T) {
-	client, err := net.Dial("tcp", ":2200")
+	client, err := net.Dial("tcp", ":2202")
 	if err != nil {
-		log.Println("err:", err.Error())
+		// log.Println("err:", err.Error())
 		return
 	}
 
 	client.Write([]byte("1234"))
 
 	readBuf := make([]byte, 1024)
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 10; i++ {
 		n, err := client.Read(readBuf)
 		if n == 0 || err != nil {
-			log.Println("client exit. err:", err.Error())
+			// log.Println("client exit. err:", err.Error())
 			return
 		}
 		log.Println("receive:", string(readBuf[0:n]))
@@ -32,9 +32,9 @@ func TestClient(t *testing.T) {
 
 // 异常退出
 func TestClientAborted(t *testing.T) {
-	client, err := net.Dial("tcp", ":2200")
+	client, err := net.Dial("tcp", ":2202")
 	if err != nil {
-		log.Println("dail err:", err.Error())
+		// log.Println("dail err:", err.Error())
 		return
 	}
 
@@ -51,11 +51,14 @@ func TestClientAborted(t *testing.T) {
 
 func TestMaxConn(t *testing.T) {
 	for i := 0; i < 200; i++ {
-		_, err := net.Dial("tcp", ":2200")
+		time.Sleep(time.Second)
+		client, err := net.Dial("tcp", ":2202")
 		if err != nil {
 			log.Println("dail err:", err.Error())
-			return
+			continue
 		}
+		client.Write([]byte("1234"))
+		log.Println("send 1234")
 	}
 }
 
