@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -46,6 +47,24 @@ func main() {
 		log.Fatal(err)
 	}
 
+	go func() {
+		for {
+			b := make([]byte, 4096)
+			var n int
+			n, err = f.Read(b)
+			if err == io.EOF {
+				log.Println("read exit")
+				break
+			} else if err != nil {
+				log.Fatal(err)
+			}
+
+			log.Printf("%s", b[:n])
+		}
+	}()
+
+	log.Println("fd", f.Fd())
+
 	os.Remove(socket)
 	var l net.Listener
 	l, err = net.Listen("unix", socket)
@@ -65,4 +84,5 @@ func main() {
 	if err = poll.Put(listenConn, f); err != nil {
 		log.Fatal(err)
 	}
+	select {}
 }

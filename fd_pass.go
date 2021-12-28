@@ -1,6 +1,7 @@
 package poll
 
 import (
+	"log"
 	"net"
 	"os"
 	"syscall"
@@ -35,8 +36,10 @@ func Get(via *net.UnixConn, num int, filenames []string) ([]*os.File, error) {
 	for i := 0; i < len(msgs) && err == nil; i++ {
 		var fds []int
 		fds, err = syscall.ParseUnixRights(&msgs[i])
-
+		log.Println("get fds", fds)
 		for fi, fd := range fds {
+
+			log.Println("get fi", fi, "fd", fd)
 			var filename string
 			if fi < len(filenames) {
 				filename = filenames[fi]
@@ -64,8 +67,10 @@ func Put(via *net.UnixConn, files ...*os.File) error {
 	fds := make([]int, len(files))
 	for i := range files {
 		fds[i] = int(files[i].Fd())
+		log.Println("put fd", fds[i])
 	}
 
+	log.Println("put fds", fds)
 	rights := syscall.UnixRights(fds...)
 	return syscall.Sendmsg(socket, nil, rights, nil, 0)
 }
