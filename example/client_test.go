@@ -10,20 +10,36 @@ import (
 func TestClient(t *testing.T) {
 	client, err := net.Dial("tcp", ":2202")
 	if err != nil {
-		// log.Println("err:", err.Error())
+		log.Println("err:", err.Error())
 		return
 	}
 
 	client.Write([]byte("1234"))
 
 	readBuf := make([]byte, 1024)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		n, err := client.Read(readBuf)
 		if n == 0 || err != nil {
-			// log.Println("client exit. err:", err.Error())
+			log.Println("client exit. err:", err.Error())
 			return
 		}
 		log.Println("receive:", string(readBuf[0:n]))
+		time.Sleep(time.Second)
+		client.Write([]byte("1234"))
+	}
+	client.Close()
+}
+
+func TestWrite(t *testing.T) {
+	client, err := net.Dial("tcp", ":2202")
+	if err != nil {
+		log.Println("err:", err.Error())
+		return
+	}
+
+	client.Write([]byte("1234"))
+
+	for i := 0; i < 100; i++ {
 		time.Sleep(time.Second)
 		client.Write([]byte("1234"))
 	}
