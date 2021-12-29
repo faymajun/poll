@@ -5,6 +5,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"github.com/faymajun/poll/config"
 )
 
 func TestClient(t *testing.T) {
@@ -37,11 +39,37 @@ func TestWrite(t *testing.T) {
 		return
 	}
 
-	client.Write([]byte("1234"))
+	recvLen := 0
+	differentSize := 0
+	go func() {
+		readBuf := make([]byte, config.BufferSize)
+		for {
+			n, _ := client.Read(readBuf)
+			log.Println("receive, len", n)
+			for i := 1; i < n; i++ {
+				if readBuf[i] != readBuf[i-1] {
+					log.Println("different cur receiveSize:", recvLen+i, " different index:", i, "last len:", n-i)
+					if differentSize > 0 {
+						log.Println("different size:", differentSize)
+						differentSize = 0
+					} else {
+						differentSize = n - i
+					}
+				}
+			}
+			if differentSize > 0 {
+				differentSize += n
+			}
+			recvLen += n
+		}
+	}()
 
-	for i := 0; i < 100; i++ {
-		time.Sleep(time.Second)
+	for i := 0; i < 10000000; i++ {
 		client.Write([]byte("1234"))
+		client.Write([]byte("1234"))
+		time.Sleep(1 * time.Second)
+		log.Println("total receive size", recvLen)
+		recvLen = 0
 	}
 	client.Close()
 }

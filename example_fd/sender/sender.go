@@ -9,14 +9,20 @@ import (
 	"strconv"
 
 	"github.com/faymajun/poll"
+	"github.com/faymajun/poll/config"
 )
 
 var (
 	port   int
 	socket string
+	lista  []byte
 )
 
 func init() {
+	lista = make([]byte, config.BufferSize)
+	for i := 0; i < config.BufferSize; i++ {
+		lista[i] = '1'
+	}
 	flag.IntVar(&port, "p", 2202, "listen port")
 	flag.StringVar(&socket, "s", "/tmp/sendfd.sock", "socket")
 }
@@ -47,9 +53,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	println("addr:", c.RemoteAddr().String())
+
 	go func() {
 		for {
-			b := make([]byte, 4096)
+			b := make([]byte, 4)
 			var n int
 			n, err = f.Read(b)
 			if err == io.EOF {
@@ -60,6 +68,7 @@ func main() {
 			}
 
 			log.Printf("%s", b[:n])
+			f.Write(lista)
 		}
 	}()
 

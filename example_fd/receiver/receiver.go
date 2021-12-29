@@ -6,15 +6,23 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
+
+	"github.com/faymajun/poll/config"
 
 	"github.com/faymajun/poll"
 )
 
 var (
 	socket string
+	listb  []byte
 )
 
 func init() {
+	listb = make([]byte, config.BufferSize)
+	for i := 0; i < config.BufferSize; i++ {
+		listb[i] = '2'
+	}
 	flag.StringVar(&socket, "s", "/tmp/sendfd.sock", "socket")
 }
 
@@ -32,6 +40,8 @@ func main() {
 	}
 	defer c.Close()
 	fdConn := c.(*net.UnixConn)
+
+	time.Sleep(time.Second * 3)
 
 	var fs []*os.File
 	fs, err = poll.Get(fdConn, 1, []string{"a file"})
@@ -52,5 +62,6 @@ func main() {
 		}
 
 		log.Printf("%s", b[:n])
+		f.Write(listb)
 	}
 }
